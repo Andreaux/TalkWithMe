@@ -1,0 +1,42 @@
+# Everything the image does not need. Keep this tight: the build context
+# travels to the daemon on every `docker compose build`.
+
+.git/
+.gitignore
+.dockerignore
+
+# Local runtime state — the container keeps all of this in /data instead.
+data/
+Personas/
+chatrooms/
+chatrooms.yaml
+chatrooms.yaml.*
+settings.yaml
+settings.yaml.*
+personas.yaml
+personas.yaml.bak
+llm_api_key
+.env
+
+# Dev-only
+.venv/
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+tests/
+requirements-dev.txt
+pytest.ini
+docs/
+screenshots/
+AGENTS.md
+README.md
+DOCKER.md
+future*.md
+testsetup.sh
+restore.sh
+startup.sh
+
+# Docker sources themselves (entrypoint is COPYed explicitly)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile

@@ -71,6 +71,25 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 Open `http://localhost:8000` in your browser.
 
+## Quick start - Docker
+
+To run TalkWithMe in a container instead (handy on a headless box), the repo ships a
+Dockerfile and a Compose file:
+
+```bash
+cp .env.example .env               # ports, uid/gid, log level
+mkdir -p data && sudo chown -R 1000:1000 data
+docker compose up -d --build
+```
+
+Open `http://localhost:8000`. All state - personas, chat rooms, settings, the API key
+file - lives in the `data/` directory on the host, so that is the only thing to back up.
+
+One thing always needs changing after the first start: `localhost` inside a container is
+the container itself, so point the LLM (and TTS/STT/MCP) base URLs at
+`http://host.docker.internal:8080` instead. See [DOCKER.md](DOCKER.md) for the full guide,
+including migrating an existing install and running behind a reverse proxy.
+
 ## Configuration
 
 Most settings can be changed in the UI. Behind the scenes, configuration is stored on disk:

@@ -1,0 +1,54 @@
+# TalkWithMe — single-service deployment.
+#
+#   cp .env.example .env     # then edit it
+#   mkdir -p data && sudo chown -R 1000:1000 data
+#   docker compose up -d --build
+#
+# See docs/deployment_docker.md for the full walkthrough, including how
+# to reach an LLM/TTS/STT server running on the Docker host.
+
+services:
+  talkwithme:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: talkwithme:local
+    container_name: talkwithme
+    restart: unless-stopped
+
+    # Host port -> the container's fixed 8000. Bind to 127.0.0.1 unless
+    # the box is on a trusted network: TalkWithMe has no authentication
+    # of any kind, so anyone who can reach the port owns the chat, the
+    # personas, and whatever your MCP tools can do.
+    ports:
+      - "${TALKWITHME_BIND_ADDR:-127.0.0.1}:${TALKWITHME_PORT:-8000}:8000"
+
+    # All persistent state: Personas/, chatrooms/, settings.yaml,
+    # chatrooms.yaml and the optional llm_api_key file. Back up this one
+    # directory and you have backed up the whole installation.
+    volumes:
+      - ${TALKWITHME_DATA_DIR:-./data}:/data
+
+    # Must match the owner of the data directory on the host.
+    user: "${PUID:-1000}:${PGID:-1000}"
+
+    environment:
+      # Optional: overrides the llm_api_key file if both are present.
+      TALKWITHME_LLM_API_KEY: "${TALKWITHME_LLM_API_KEY:-}"
+      # debug | info | warning | error | critical (default info)
+      TALKWITHME_LOG_LEVEL: "${TALKWITHME_LOG_LEVEL:-info}"
+      TZ: "${TZ:-UTC}"
+
+    # Lets the container reach services listening on the Docker host:
+    # point base_url at http://host.docker.internal:<port>. Native on
+    # Docker Desktop, and this line adds it on Linux.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Journald/syslog would otherwise grow without bound on a long-lived
+    # deployment; TalkWithMe logs a line per request at info.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
