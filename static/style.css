@@ -109,7 +109,9 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    /* env(safe-area-inset-*) keeps controls clear of a notch in landscape
+       (viewport-fit=cover in index.html); 0 on screens without one. */
+    padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
     position: relative;
@@ -127,6 +129,21 @@ html, body {
     display: flex;
     gap: 10px;
     align-items: center;
+}
+
+/* The group that collapses into the ⋯ menu on small screens. On wide
+   screens it is simply part of the action row. */
+#topbar-menu {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Small-screen-only controls (☰, ⋯) and the drawer backdrop are hidden on
+   wide screens; the "Small screens" section at the end shows them. */
+.mobile-only,
+#sidebar-backdrop {
+    display: none !important;
 }
 
 .topbar-actions button {
@@ -191,6 +208,10 @@ html, body {
 #main-layout {
     display: flex;
     height: calc(100vh - var(--topbar-height));
+    /* dvh = the height actually visible. On iOS Safari 100vh is the height
+       with the browser toolbars hidden, which pushed the input bar under
+       the bottom toolbar. Browsers without dvh keep the vh line above. */
+    height: calc(100dvh - var(--topbar-height));
 }
 
 /* --------------------------------------------------------------------------
@@ -613,6 +634,8 @@ html, body {
     align-items: flex-end;
     gap: 10px;
     padding: 14px 20px;
+    /* Clear the iPhone home indicator (viewport-fit=cover); 14px elsewhere. */
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
     background: var(--bg-secondary);
     border-top: 1px solid var(--border-color);
 }
@@ -752,6 +775,7 @@ html, body {
     width: 100%;
     max-width: 680px;
     max-height: 90vh;
+    max-height: 90dvh; /* see #main-layout: visible height on mobile */
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1726,5 +1750,134 @@ html, body {
     /* Touch devices: no hover to reveal the button, so keep it visible. */
     .message-delete-btn:not(:disabled) {
         opacity: 1;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Small screens (phones, narrow windows)
+   The sidebar becomes an off-canvas drawer toggled by ☰, and the secondary
+   top-bar controls collapse into a ⋯ menu (both driven by layout.js). Only
+   the stop and TTS buttons stay in the top bar.
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .mobile-only {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #topbar {
+        gap: 8px;
+        padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+    }
+
+    /* ☰ sits outside .topbar-actions, so give it the same button look. */
+    #btn-sidebar-toggle {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    #topbar h1 {
+        flex: 1;
+        min-width: 0;
+        font-size: 1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar-actions {
+        gap: 6px;
+    }
+
+    /* Collapsed menu: a dropdown under the ⋯ button, shown by .open. */
+    #topbar-menu {
+        display: none;
+        position: absolute;
+        top: calc(var(--topbar-height) - 4px);
+        right: max(8px, env(safe-area-inset-right));
+        z-index: 60;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        min-width: 210px;
+        padding: 10px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    #topbar-menu.open {
+        display: flex;
+    }
+
+    #topbar-menu button {
+        text-align: left;
+        padding: 10px 14px;
+        font-size: 1rem;
+    }
+
+    /* Sidebar drawer: off-screen to the left until body.sidebar-open. */
+    #sidebar {
+        position: fixed;
+        top: var(--topbar-height);
+        bottom: 0;
+        left: 0;
+        z-index: 50;
+        width: min(85vw, var(--sidebar-width));
+        min-width: 0;
+        padding-left: max(16px, env(safe-area-inset-left));
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+    }
+
+    body.sidebar-open #sidebar {
+        transform: none;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
+    }
+
+    body.sidebar-open #sidebar-backdrop {
+        display: block !important;
+        position: fixed;
+        inset: var(--topbar-height) 0 0 0;
+        z-index: 40;
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    #messages {
+        padding: 12px;
+    }
+
+    .message-row {
+        max-width: 92%;
+    }
+
+    #input-bar {
+        gap: 8px;
+        padding: 10px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    }
+
+    /* iOS Safari zooms the page in when a focused text field's font is
+       under 16px, and doesn't zoom back out. */
+    #message-input,
+    textarea,
+    select,
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+        font-size: 16px;
+    }
+
+    .modal-overlay {
+        padding: 8px;
+    }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+    #sidebar {
+        transition: none;
     }
 }

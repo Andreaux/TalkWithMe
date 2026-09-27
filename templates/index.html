@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>TalkWithMe v7.2</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
@@ -15,20 +15,28 @@
     <div id="app">
         <!-- Top bar -->
         <header id="topbar">
+            <!-- Small screens only (layout.js): opens the sidebar as a drawer. -->
+            <button id="btn-sidebar-toggle" class="icon-btn mobile-only" type="button"
+                    title="Chat rooms and personas" aria-label="Show chat rooms and personas"
+                    aria-controls="sidebar" aria-expanded="false">&#9776;</button>
             <h1>TalkWithMe v7.2</h1>
             <div class="topbar-actions">
-                <label for="theme-select" class="theme-label">Theme</label>
-                <select id="theme-select" title="Choose color theme">
-                    <option value="dark" selected>Dark</option>
-                    <option value="light">Light</option>
-                    <option value="matrix">Matrix</option>
-                    <option value="blues">Blues</option>
-                </select>
-                <button id="btn-persona-editor" title="Open persona editor">&#9998; Personas</button>
-                <button id="btn-chat-rooms" title="Manage chat rooms">&#127970; Chat Rooms</button>
-                <button id="btn-gen-settings" title="Open settings">&#9881; Settings</button>
-                <button id="btn-settings" title="Open server configuration">&#128268; Servers</button>
-                <button id="btn-new-chat" title="Start a new chat">New Chat</button>
+                <!-- On small screens this group collapses into the "more" menu
+                     opened by #btn-topbar-menu; on wide screens it is inline. -->
+                <div id="topbar-menu">
+                    <label for="theme-select" class="theme-label">Theme</label>
+                    <select id="theme-select" title="Choose color theme">
+                        <option value="dark" selected>Dark</option>
+                        <option value="light">Light</option>
+                        <option value="matrix">Matrix</option>
+                        <option value="blues">Blues</option>
+                    </select>
+                    <button id="btn-persona-editor" title="Open persona editor">&#9998; Personas</button>
+                    <button id="btn-chat-rooms" title="Manage chat rooms">&#127970; Chat Rooms</button>
+                    <button id="btn-gen-settings" title="Open settings">&#9881; Settings</button>
+                    <button id="btn-settings" title="Open server configuration">&#128268; Servers</button>
+                    <button id="btn-new-chat" title="Start a new chat">New Chat</button>
+                </div>
                 <!-- Stop: a temporary "mute" (docs/feature_stop_button.md).
                      Disabled whenever no audio source is playing; audio
                      already queued is still fetched and persisted. -->
@@ -36,6 +44,10 @@
                 <button id="btn-tts-toggle" title="Toggle TTS playback" class="icon-btn">
                     <span id="tts-icon">&#128266;</span>
                 </button>
+                <!-- Small screens only (layout.js): opens the collapsed #topbar-menu. -->
+                <button id="btn-topbar-menu" class="icon-btn mobile-only" type="button"
+                        title="More" aria-label="More options"
+                        aria-controls="topbar-menu" aria-expanded="false">&#8943;</button>
             </div>
         </header>
 
@@ -79,6 +91,9 @@
                     <!-- Populated by JS -->
                 </div>
             </aside>
+            <!-- Small screens only: dims the chat behind the open sidebar
+                 drawer; tapping it closes the drawer (layout.js). -->
+            <div id="sidebar-backdrop"></div>
 
             <!-- Chat panel -->
             <main id="chat-panel">
@@ -469,6 +484,7 @@
     <script src="/static/tts-params.js"></script>
     <script src="/static/settings.js"></script>
     <script src="/static/gen-settings.js"></script>
+    <script src="/static/layout.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>

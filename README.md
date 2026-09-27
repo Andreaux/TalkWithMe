@@ -27,6 +27,7 @@ Follow the development of this app on my YouTube channel:
 - Optional MCP tools: let any persona call tools served by MCP servers (e.g. fetch web pages, run queries)
 - Fully local — no internet required, no authentication. You can connect to remote LLMs with an API key if you wish, but TalkWithMe can be run 100% locally. NOTE: only connect to remote LLMs that you trust.
 - Theme chooser in the top-right: Dark (default), Light, Matrix, and Blues
+- Works on phones: on narrow screens the sidebar becomes a slide-in drawer (&#9776;) and the top-bar controls collapse into a &#8943; menu
 - Each room persists its text and audio messages
 
 ## Prerequisites

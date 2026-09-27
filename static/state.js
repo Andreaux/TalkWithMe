@@ -82,6 +82,12 @@ const ttsIcon = document.getElementById("tts-icon");
 const personaListEl = document.getElementById("persona-list");
 const themeSelectEl = document.getElementById("theme-select");
 
+// Small-screen layout: sidebar drawer + collapsed top-bar menu (used by layout.js)
+const sidebarToggleBtn = document.getElementById("btn-sidebar-toggle");
+const sidebarBackdropEl = document.getElementById("sidebar-backdrop");
+const topbarMenuBtn = document.getElementById("btn-topbar-menu");
+const topbarMenuEl = document.getElementById("topbar-menu");
+
 // Chat room selector (used by chatrooms.js)
 const chatRoomDropdown = document.getElementById("chat-room-dropdown");
 const echoChamberToggle = document.getElementById("echo-chamber-toggle");

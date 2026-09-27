@@ -2,7 +2,8 @@
  * app.js — TalkWithMe frontend orchestrator.
  *
  * This file is intentionally slim. It coordinates initialization across
- * feature modules (state, chat, tts, stt, persona, chatrooms, settings, theme).
+ * feature modules (state, chat, tts, stt, persona, chatrooms, settings, theme,
+ * layout).
  *
  * Cross-cutting concerns that multiple modules depend on live here:
  *  - loadPersonas() — fetched by persona.js after CRUD, triggers loadChatRooms()
@@ -131,6 +132,7 @@ function setupEventListeners() {
     themeSelectEl.addEventListener("change", () => {
         applyTheme(themeSelectEl.value, true);
     });
+    setupLayoutControls(); // small-screen sidebar drawer + top-bar menu
 
     document.addEventListener("keydown", (e) => {
         if (e.ctrlKey && e.code === "Space" && !micBtn.disabled) {
