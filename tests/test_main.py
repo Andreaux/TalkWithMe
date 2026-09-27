@@ -1,8 +1,10 @@
-"""Tests for app/main.py — the index route, the startup lifespan, and the
-TALKWITHME_LOG_LEVEL environment override."""
+"""Tests for app/main.py — the index route, static asset caching (versioned
+URLs + Cache-Control), the startup lifespan, and the TALKWITHME_LOG_LEVEL
+environment override."""
 
 import asyncio
 import logging
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -250,6 +252,59 @@ class TestIndex:
         resp = client.get("/static/state.js")
         assert resp.status_code == 200
         assert len(resp.content) > 0
+
+
+class TestStaticAssetCaching:
+    """Browsers must never mix old and new frontend files after a deploy.
+
+    Without cache instructions, browsers cache heuristically: Chrome on iOS
+    kept a days-old style.css/app.js next to a new index.html for hours,
+    across reloads, which broke the page. Two defenses: versioned asset URLs
+    in index.html, and Cache-Control: no-cache on /static responses.
+    """
+
+    def test_every_css_and_js_url_in_index_is_versioned(self, client):
+        html = client.get("/").text
+        assets = re.findall(r'(?:src|href)="(/static/[^"]+\.(?:css|js)[^"]*)"', html)
+        assert any("style.css" in a for a in assets) and any("app.js" in a for a in assets)
+        for url in assets:
+            assert url.endswith(f"?v={main_module.ASSET_VERSION}"), url
+
+    def test_asset_version_is_the_fingerprint_of_the_static_dir(self):
+        assert main_module.ASSET_VERSION == main_module.compute_asset_version(main_module.STATIC_DIR)
+        assert re.fullmatch(r"[0-9a-f]{12}", main_module.ASSET_VERSION)
+
+    def test_asset_version_changes_when_a_static_file_changes(self, tmp_path):
+        (tmp_path / "style.css").write_text("body { color: red; }")
+        (tmp_path / "app.js").write_text("init();")
+        before = main_module.compute_asset_version(tmp_path)
+        assert main_module.compute_asset_version(tmp_path) == before  # deterministic
+
+        (tmp_path / "style.css").write_text("body { color: blue; }")
+        assert main_module.compute_asset_version(tmp_path) != before
+
+    def test_asset_version_changes_when_a_static_file_is_added_or_renamed(self, tmp_path):
+        (tmp_path / "app.js").write_text("init();")
+        before = main_module.compute_asset_version(tmp_path)
+        (tmp_path / "layout.js").write_text("")
+        added = main_module.compute_asset_version(tmp_path)
+        assert added != before
+        (tmp_path / "layout.js").rename(tmp_path / "other.js")
+        assert main_module.compute_asset_version(tmp_path) != added
+
+    def test_static_responses_require_revalidation(self, client):
+        resp = client.get("/static/style.css")
+        assert resp.status_code == 200
+        assert resp.headers["cache-control"] == "no-cache"
+
+    def test_unchanged_static_file_revalidates_with_304(self, client):
+        # no-cache is cheap because StaticFiles honours ETag: an unchanged
+        # file answers 304 with no body, and still says no-cache.
+        etag = client.get("/static/app.js").headers["etag"]
+        resp = client.get("/static/app.js", headers={"If-None-Match": etag})
+        assert resp.status_code == 304
+        assert resp.content == b""
+        assert resp.headers["cache-control"] == "no-cache"
 
 
 class TestLifespan:

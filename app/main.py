@@ -4,6 +4,7 @@ Wires up routers, static files, and the Jinja2 template engine.
 Loads configuration at startup and seeds the session with all configured personas.
 """
 
+import hashlib
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -144,8 +145,51 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+
+def compute_asset_version(static_dir: Path) -> str:
+    """Short fingerprint of every file under ``static_dir`` (paths + contents).
+
+    index.html appends it to its CSS/JS URLs (``?v=...``), so any deploy that
+    changes a static file changes every asset URL and no browser can keep
+    serving the old copy. Without it, browsers apply heuristic caching to
+    responses with no Cache-Control (freshness guessed from Last-Modified):
+    Chrome on iOS was seen serving a days-old style.css and app.js next to a
+    new index.html for hours, even across reloads and after clearing recent
+    browsing data. Computed once at import: static files only change with a
+    redeploy/restart, and the no-cache header below still makes browsers
+    revalidate in between.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(p for p in static_dir.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(static_dir).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()[:12]
+
+
+ASSET_VERSION = compute_asset_version(STATIC_DIR)
+
+
+class RevalidatingStaticFiles(StaticFiles):
+    """StaticFiles that tell browsers to revalidate on every use.
+
+    ``Cache-Control: no-cache`` still allows caching, but the browser must ask
+    the server first; StaticFiles already sends ETag/Last-Modified, so an
+    unchanged file costs a tiny 304. Together with the ``?v=`` asset URLs this
+    stops heuristic caching from mixing old and new frontend files.
+    """
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
+
 # Mount static files
-app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "static")), name="static")
+app.mount("/static", RevalidatingStaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Register routers
 app.include_router(personas.router)
@@ -159,6 +203,8 @@ app.include_router(persistence.router)
 
 # Jinja2 templates
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
+# Cache-busting token for the ?v= on CSS/JS URLs in index.html.
+templates.env.globals["asset_version"] = ASSET_VERSION
 
 
 @app.get("/", response_class=HTMLResponse)
